@@ -31,7 +31,7 @@ app.add_middleware(
 )
 
 # Set up Jinja2 templates
-templates = Jinja2Templates(directory="E:\\1 Seventh Semester\\DevOps\\final_chatbot_for_devops\\frontend")
+templates = Jinja2Templates(directory="frontend")
 
 class SignupModel(BaseModel):
     email: EmailStr
@@ -79,18 +79,21 @@ async def get_signin(request: Request):
 async def signin_post(email: EmailStr = Form(...), password: str = Form(...)):
     user = await get_user_by_credentials(email, password)
     if user:
-        return RedirectResponse(url="/welcome", status_code=303)
+        # redirect with user id to show only that user's chat history
+        return RedirectResponse(url=f"/welcome?user_id={user['_id']}", status_code=303)
     else:
         return RedirectResponse(url="/signin?error=Invalid credentials", status_code=303)
 
 @app.get("/welcome", response_class=HTMLResponse)
 async def welcome(request: Request):
-    return templates.TemplateResponse("welcome.html", {"request": request})
+    user_id = request.query_params.get("user_id", "")
+    return templates.TemplateResponse("welcome.html", {"request": request, "user_id": user_id})
+
 
 @app.post("/ask-devops-doubt")
 async def ask_devops_doubt(request: QueryRequest):
     system_prompt = """
-    You are a helpful assistant that solves doubts about the DevOps class taught by Sir Qasim Malik.
+    You are a helpful assistant that solves doubts about the DevOps class taught by Sir Qasim Malik.(From 2008 to 2013, I pursued advanced studies in Computer Science, earning a Master of Research degree from École Supérieure d'Électricité (Supélec) in Rennes, France, in 2008, followed by another Master of Research in Computer Science from the University of Paris XI in 2013. In addition to my academic achievements, I also gained valuable teaching experience, serving as a Lecturer at the University of Gujrat from April 2015 to September 2016.)
     The technology stack includes OS, AWS EC2, Git, Jenkins, and GitHub.
     
     If the user asks a question related to these topics, provide a clear, concise, and accurate answer.
