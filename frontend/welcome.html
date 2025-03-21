@@ -1,147 +1,213 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DevOps</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevOps Chat</title>
     <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f5f5f7;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        .chat-container {
-            flex: 1;
-            margin: 20px auto;
-            width: 90%;
-            max-width: 800px;
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .chat-header {
-            background: #007acc;
-            padding: 16px;
-            color: #fff;
-            text-align: center;
-        }
-        .chat-messages {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            background: #e5ddd5;
-        }
-        .chat-input {
-            display: flex;
-            border-top: 1px solid #ccc;
-        }
-        .chat-input input {
-            flex: 1;
-            padding: 16px;
-            border: none;
-            outline: none;
-            font-size: 16px;
-        }
-        .chat-input button {
-            padding: 0 20px;
-            border: none;
-            background: #007acc;
-            color: #fff;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .message {
-            margin-bottom: 12px;
-            padding: 10px;
-            border-radius: 8px;
-            max-width: 70%;
-        }
-        .user-message {
-            background: #dcf8c6;
-            align-self: flex-end;
-        }
-        .bot-message {
-            background: #fff;
-            align-self: flex-start;
-        }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f5f5f7;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      .chat-container {
+        flex: 1;
+        margin: 20px auto;
+        width: 90%;
+        max-width: 800px;
+        background: #fff;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      }
+      .chat-header {
+        background: #000000;
+        padding: 16px;
+        color: white;
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+      }
+      .chat-messages {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        background: #e5ddd5;
+        display: flex;
+        flex-direction: column;
+      }
+      .chat-input {
+        display: flex;
+        border-top: 1px solid #ccc;
+        padding: 10px;
+        background: #fff;
+      }
+      .chat-input input {
+        flex: 1;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+        outline: none;
+      }
+      .chat-input button {
+        padding: 12px 20px;
+        border: none;
+        background: #007acc;
+        color: #fff;
+        cursor: pointer;
+        font-size: 16px;
+        border-radius: 5px;
+        margin-left: 10px;
+      }
+      .chat-input button:hover {
+        background: #0056b3;
+      }
+      .message-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .message {
+        padding: 12px;
+        border-radius: 12px;
+        max-width: 65%;
+        word-wrap: break-word;
+        font-size: 16px;
+      }
+      .user-message {
+        background: #dcf8c6;
+        align-self: flex-end;
+        text-align: right;
+      }
+      .bot-message {
+        background: #fff;
+        align-self: flex-start;
+        text-align: left;
+        border: 1px solid #ccc;
+      }
+      .user-icon,
+      .bot-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        margin: 0 10px;
+      }
+      .user-icon {
+        background: url("https://cdn-icons-png.flaticon.com/512/847/847969.png")
+          no-repeat center;
+        background-size: cover;
+      }
+      .bot-icon {
+        background: url("https://cdn-icons-png.flaticon.com/512/4712/4712037.png")
+          no-repeat center;
+        background-size: cover;
+      }
+      .user-container {
+        justify-content: flex-end;
+      }
+      .bot-container {
+        justify-content: flex-start;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="chat-container">
-        <div class="chat-header">
-            DevOps Chatbot
-        </div>
-        <div id="chatMessages" class="chat-messages">
-        </div>
-        <div class="chat-input">
-            <input type="text" id="userInput" placeholder="Type your question here..." />
-            <button id="sendBtn">Send</button>
-        </div>
+      <div class="chat-header">DevOps Chatbot</div>
+      <div id="chatMessages" class="chat-messages"></div>
+      <div class="chat-input">
+        <input
+          type="text"
+          id="userInput"
+          placeholder="Type your question here..."
+        />
+        <button id="sendBtn">Send</button>
+      </div>
     </div>
+
     <script>
-        const userId = "{{ user_id }}";  // new variable containing user id
-        const chatMessages = document.getElementById("chatMessages");
-        const userInput = document.getElementById("userInput");
-        const sendBtn = document.getElementById("sendBtn");
+      const userId = "{{ user_id }}";
+      const chatMessages = document.getElementById("chatMessages");
+      const userInput = document.getElementById("userInput");
+      const sendBtn = document.getElementById("sendBtn");
 
-        function appendMessage(message, className) {
-            const msgDiv = document.createElement("div");
-            msgDiv.classList.add("message", className);
-            msgDiv.textContent = message;
-            chatMessages.appendChild(msgDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+      function appendMessage(message, className, isUser) {
+        const messageContainer = document.createElement("div");
+        messageContainer.classList.add(
+          "message-container",
+          isUser ? "user-container" : "bot-container"
+        );
+
+        const icon = document.createElement("div");
+        icon.classList.add(isUser ? "user-icon" : "bot-icon");
+
+        const msgDiv = document.createElement("div");
+        msgDiv.classList.add("message", className);
+        msgDiv.textContent = message;
+
+        if (isUser) {
+          messageContainer.appendChild(msgDiv);
+          messageContainer.appendChild(icon);
+        } else {
+          messageContainer.appendChild(icon);
+          messageContainer.appendChild(msgDiv);
         }
 
-        // New function to fetch and display previous chat history
-        async function loadHistory() {
-            try {
-                const res = await fetch(`/chat-history?user_id=${userId}`);
-                const data = await res.json();
-                if (data.history && data.history.length) {
-                    data.history.forEach(entry => {
-                        appendMessage(entry.message, entry.sender === "user" ? "user-message" : "bot-message");
-                    });
-                }
-            } catch (error) {
-                console.error("Failed to load chat history", error);
-            }
+        chatMessages.appendChild(messageContainer);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      async function loadHistory() {
+        try {
+          const res = await fetch(`/chat-history?user_id=${userId}`);
+          const data = await res.json();
+          if (data.history && data.history.length) {
+            data.history.forEach((entry) => {
+              appendMessage(
+                entry.message,
+                entry.sender === "user" ? "user-message" : "bot-message",
+                entry.sender === "user"
+              );
+            });
+          }
+        } catch (error) {
+          console.error("Failed to load chat history", error);
         }
+      }
 
-        // Trigger loading history upon page load
-        document.addEventListener("DOMContentLoaded", loadHistory);
+      document.addEventListener("DOMContentLoaded", loadHistory);
 
-        sendBtn.addEventListener("click", async () => {
-            const message = userInput.value.trim();
-            if (message === "") return;
-            appendMessage(message, "user-message");
-            userInput.value = "";
-            
-            try {
-                const response = await fetch("/ask-devops-doubt", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ user_id: userId, message: message })  // updated payload
-                });
-                const data = await response.json();
-                appendMessage(data.response, "bot-message");
-            } catch (error) {
-                appendMessage("Error retrieving answer.", "bot-message");
-            }
-        });
+      sendBtn.addEventListener("click", async () => {
+        const message = userInput.value.trim();
+        if (message === "") return;
+        appendMessage(message, "user-message", true);
+        userInput.value = "";
 
-        userInput.addEventListener("keyup", (event) => {
-            if (event.key === "Enter") {
-                sendBtn.click();
-            }
-        });
+        try {
+          const response = await fetch("/ask-devops-doubt", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ user_id: userId, message: message }),
+          });
+          const data = await response.json();
+          appendMessage(data.response, "bot-message", false);
+        } catch (error) {
+          appendMessage("Error retrieving answer.", "bot-message", false);
+        }
+      });
+
+      userInput.addEventListener("keyup", (event) => {
+        if (event.key === "Enter") {
+          sendBtn.click();
+        }
+      });
     </script>
-</body>
+  </body>
 </html>
