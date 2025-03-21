@@ -30,8 +30,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Set up Jinja2 templates
-templates = Jinja2Templates(directory="frontend")
+# Set up Jinja2 templates using the relative path (from backend to frontend)
+templates = Jinja2Templates(directory="../frontend")
 
 class SignupModel(BaseModel):
     email: EmailStr
