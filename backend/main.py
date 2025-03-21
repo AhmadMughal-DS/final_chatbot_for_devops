@@ -12,9 +12,7 @@ from database.curd_mongodb import create_user, get_user_by_credentials, save_cha
 
 app = FastAPI()
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY environment variable not set.")
+GROQ_API_KEY = "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"
 
 # Initialize GROQ client
 client = Groq(
