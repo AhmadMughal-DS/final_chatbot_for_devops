@@ -31,7 +31,7 @@ app.add_middleware(
 )
 
 # Set up Jinja2 templates
-templates = Jinja2Templates(directory="E:\\1 Seventh Semester\\DevOps\\chatbot interview\\.venv\\templates")
+templates = Jinja2Templates(directory="E:\\1 Seventh Semester\\DevOps\\final_chatbot_for_devops\\frontend")
 
 class SignupModel(BaseModel):
     email: EmailStr
