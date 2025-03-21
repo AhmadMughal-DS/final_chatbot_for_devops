@@ -3,9 +3,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
-from src.database.curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history  # updated import
+from database.curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history 
 from groq import Groq
 import os
+from starlette.concurrency import run_in_threadpool
+from database.curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history
 
 
 app = FastAPI()
@@ -38,6 +40,13 @@ class SignupModel(BaseModel):
 class QueryRequest(BaseModel):
     user_id: str    # new field for user id
     message: str
+
+
+@app.post("/user")
+async def register_user(email: str, password: str):
+    user = await run_in_threadpool(create_user, email, password)
+    return user
+
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):

@@ -1,24 +1,25 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
+from bson import ObjectId
 from datetime import datetime
 
 # Set up DB connection for chatbot
-client = AsyncIOMotorClient("mongodb+srv://ahmadzafar:IUzvD9FvjOjHoqPR@devops.fzvip.mongodb.net/")
+client = MongoClient("mongodb+srv://ahmadzafar:IUzvD9FvjOjHoqPR@devops.fzvip.mongodb.net/")
 db = client.devops_assignment  
 
-async def create_user(email: str, password: str):
+def create_user(email: str, password: str):
     # Check if user already exists based on email
-    existing_user = await db.users.find_one({"email": email})
+    existing_user = db.users.find_one({"email": email})
     if existing_user:
         return None  # Account already exists
     user = {"email": email, "password": password}
-    result = await db.users.insert_one(user)
+    result = db.users.insert_one(user)
     user['_id'] = result.inserted_id
     return user
 
-async def get_user_by_credentials(email: str, password: str):
-    return await db.users.find_one({"email": email, "password": password})
+def get_user_by_credentials(email: str, password: str):
+    return db.users.find_one({"email": email, "password": password})
 
-async def save_chat(user_id, message, sender):
+def save_chat(user_id, message, sender):
     """Save a chat message for a specific user."""
     chat_entry = {
         "user_id": user_id,
@@ -26,11 +27,11 @@ async def save_chat(user_id, message, sender):
         "sender": sender,  # "user" or "bot"
         "timestamp": datetime.utcnow()
     }
-    await db.chat_history.insert_one(chat_entry)
+    db.chat_history.insert_one(chat_entry)
 
-async def get_chat_history(user_id):
+def get_chat_history(user_id):
     """Retrieve chat history for a specific user."""
-    chats = await db.chat_history.find({"user_id": user_id}).sort("timestamp", 1).to_list(None)
+    chats = list(db.chat_history.find({"user_id": user_id}).sort("timestamp", 1))
     for chat in chats:
         # Convert ObjectId and datetime for JSON serialization
         chat['_id'] = str(chat['_id'])
