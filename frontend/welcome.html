@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f5f7;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .chat-container {
+            flex: 1;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 800px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #007acc;
+            padding: 16px;
+            color: #fff;
+            text-align: center;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background: #e5ddd5;
+        }
+        .chat-input {
+            display: flex;
+            border-top: 1px solid #ccc;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            outline: none;
+            font-size: 16px;
+        }
+        .chat-input button {
+            padding: 0 20px;
+            border: none;
+            background: #007acc;
+            color: #fff;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .message {
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 70%;
+        }
+        .user-message {
+            background: #dcf8c6;
+            align-self: flex-end;
+        }
+        .bot-message {
+            background: #fff;
+            align-self: flex-start;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            DevOps Chatbot
+        </div>
+        <div id="chatMessages" class="chat-messages">
+        </div>
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Type your question here..." />
+            <button id="sendBtn">Send</button>
+        </div>
+    </div>
+    <script>
+        const userId = "{{ user_id }}";  // new variable containing user id
+        const chatMessages = document.getElementById("chatMessages");
+        const userInput = document.getElementById("userInput");
+        const sendBtn = document.getElementById("sendBtn");
+
+        function appendMessage(message, className) {
+            const msgDiv = document.createElement("div");
+            msgDiv.classList.add("message", className);
+            msgDiv.textContent = message;
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // New function to fetch and display previous chat history
+        async function loadHistory() {
+            try {
+                const res = await fetch(`/chat-history?user_id=${userId}`);
+                const data = await res.json();
+                if (data.history && data.history.length) {
+                    data.history.forEach(entry => {
+                        appendMessage(entry.message, entry.sender === "user" ? "user-message" : "bot-message");
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to load chat history", error);
+            }
+        }
+
+        // Trigger loading history upon page load
+        document.addEventListener("DOMContentLoaded", loadHistory);
+
+        sendBtn.addEventListener("click", async () => {
+            const message = userInput.value.trim();
+            if (message === "") return;
+            appendMessage(message, "user-message");
+            userInput.value = "";
+            
+            try {
+                const response = await fetch("/ask-devops-doubt", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ user_id: userId, message: message })  // updated payload
+                });
+                const data = await response.json();
+                appendMessage(data.response, "bot-message");
+            } catch (error) {
+                appendMessage("Error retrieving answer.", "bot-message");
+            }
+        });
+
+        userInput.addEventListener("keyup", (event) => {
+            if (event.key === "Enter") {
+                sendBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
