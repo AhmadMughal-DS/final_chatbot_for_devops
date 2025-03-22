@@ -7,11 +7,8 @@ from database.curd_mongodb import create_user, get_user_by_credentials, save_cha
 from groq import Groq
 import os
 
-
-
-from fastapi import FastAPI, Request, Form
 from starlette.concurrency import run_in_threadpool
-from database.curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history
+
 
 
 app = FastAPI()
