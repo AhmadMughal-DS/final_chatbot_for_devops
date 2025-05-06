@@ -1,4 +1,5 @@
 .venv/
 .vscode/
+.ebxextensions/
 backend/__pycache__
 

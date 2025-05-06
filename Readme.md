@@ -37,7 +37,7 @@ Welcome to the deployment guide for the DevOps Chatbot. Follow the steps below t
    ```
 4. **Clone Your Repository:**  
    ```bash
-   git clone <YOUR_REPO_URL>
+   git clone https://github.com/AhmadMughal-DS/final_chatbot_for_devops
    ```
 
 *After cloning, continue with the next steps.*
