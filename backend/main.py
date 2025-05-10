@@ -97,7 +97,11 @@ async def ask_devops_doubt(request: QueryRequest):
     
     If the user asks a question related to these topics, provide a clear, concise, and accurate answer.
     If the user asks about something unrelated to DevOps or the specified technology stack, respond with:
-    "I'm here to solve your doubts about the DevOps class from Sir Qasim Malik. Please ask questions related to OS, AWS EC2, Git, Jenkins, or GitHub."
+    "I'm here to solve your doubts about the DevOps class from Sir Qasim Malik. Please ask questions related to OS, AWS EC2, Git, Jenkins, or GitHub.
+
+
+
+    
     """
     try:
         chat_completion = client.chat.completions.create(
