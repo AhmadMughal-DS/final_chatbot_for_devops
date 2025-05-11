@@ -10,8 +10,6 @@ COPY . .
 # Step 4: Python Dependencies Install Karna
 RUN pip install -r requirements.txt
 
-# Step 5: Expose Backend Port (API runs on this port)
-EXPOSE 8000
+# Step : Backend app ko run karna
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000:8000"]
 
-# Step 6: Backend app ko run karna
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
