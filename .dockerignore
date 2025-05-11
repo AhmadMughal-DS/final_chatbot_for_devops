@@ -1,0 +1,4 @@
+.venv/
+.backend/__pycache__
+.frontend/__pycache__
+.backend/database/__pycache__
