@@ -3,14 +3,19 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
-from backend.curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history 
+from .curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history 
 from groq import Groq
 import os
+from openai import OpenAI
 
 from starlette.concurrency import run_in_threadpool
+novita_client = OpenAI(
+    base_url="https://api.novita.ai/v3/openai",
+    api_key="sk_koHg-4Cip9AK4shJxPJhjKSM10tCdwLysoAbW85YSaU",  # Replace with your valid key
+)
 
-
-
+model = "google/gemma-3-27b-it"
+stream = False  # Set to True if you want to handle streaming
 app = FastAPI()
 
 GROQ_API_KEY = "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"
@@ -30,7 +35,7 @@ app.add_middleware(
 )
 
 # Set up Jinja2 templates using the relative path (from backend to frontend)
-templates = Jinja2Templates(directory="../frontend")
+templates = Jinja2Templates(directory="frontend")
 
 class SignupModel(BaseModel):
     email: EmailStr
@@ -92,45 +97,38 @@ async def welcome(request: Request):
 @app.post("/ask-devops-doubt")
 async def ask_devops_doubt(request: QueryRequest):
     system_prompt = """
-    You are a helpful assistant that solves doubts about the DevOps class taught by Sir Qasim Malik.(From 2008 to 2013, I pursued advanced studies in Computer Science, earning a Master of Research degree from École Supérieure d'Électricité (Supélec) in Rennes, France, in 2008, followed by another Master of Research in Computer Science from the University of Paris XI in 2013. In addition to my academic achievements, I also gained valuable teaching experience, serving as a Lecturer at the University of Gujrat from April 2015 to September 2016.)
-    The technology stack includes OS, AWS EC2, Git, Jenkins, and GitHub, Docker, Jenkins, and devops related tools and interview questions.
-    
-    If the user asks a question related to these topics, provide a clear, concise, and accurate answer.
-    If the user asks about something unrelated to DevOps or the specified technology stack, respond with:
-    "I'm here to solve your doubts about the DevOps class from Sir Qasim Malik. Please ask questions related to OS, AWS EC2, Git, Jenkins, or GitHub.
-
-
-
-    
+    You are a helpful assistant that solves doubts about the DevOps class taught by Sir Qasim Malik...
+    (Include the full original system prompt here)
     """
+
     try:
-        chat_completion = client.chat.completions.create(
+        chat_completion = novita_client.chat.completions.create(
+            model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": request.message},
             ],
-            model="llama-3.3-70b-versatile",
+            stream=stream,
+            max_tokens=1000,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to communicate with GROQ API: {str(e)}")
-    
+        raise HTTPException(status_code=500, detail=f"Failed to communicate with Novita AI API: {str(e)}")
 
+    if stream:
+        # Optional: Handle streaming responses (basic example)
+        full_response = ""
+        for chunk in chat_completion:
+            part = chunk.choices[0].delta.content or ""
+            full_response += part
+        response = full_response.strip()
+    else:
+        try:
+            response = chat_completion.choices[0].message.content.strip()
+        except (KeyError, IndexError, AttributeError):
+            raise HTTPException(status_code=500, detail="Invalid response format from Novita AI.")
 
-    
-    try:
-        response = chat_completion.choices[0].message.content.strip()
-    except (KeyError, IndexError, AttributeError):
-        raise HTTPException(status_code=500, detail="Invalid response format from GROQ API.")
-    
-    # Save user's question and bot's answer in DB
+    # Save question and answer to DB
     await save_chat(request.user_id, request.message, "user")
     await save_chat(request.user_id, response, "bot")
-    
-    print(response)
-    return {"response": response}
 
-@app.get("/chat-history")
-async def chat_history(user_id: str):
-    # Retrieve chat history for the given user and return as JSON
-    history = await get_chat_history(user_id)
-    return {"history": history}
+    return {"response": response}
