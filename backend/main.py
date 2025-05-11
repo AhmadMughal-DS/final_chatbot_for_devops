@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
-from database.curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history 
+from backend.curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history 
 from groq import Groq
 import os
 
