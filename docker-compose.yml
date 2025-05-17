@@ -1,15 +1,8 @@
-version: '3'
+version: '3.8'
+
 services:
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend  # Backend Dockerfile specify karo
+    image: ahmad928/backend:latest
     ports:
-      - "5000:5000"  # Expose Backend Port
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend  # Frontend Dockerfile specify karo
-    ports:
-      - "80:80"  # Expose Frontend Port
+      - "8000:8000"
+    restart: unless-stopped

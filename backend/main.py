@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
-from .curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history 
+from curd_mongodb import create_user, get_user_by_credentials, save_chat, get_chat_history 
 from groq import Groq
 import os
 from openai import OpenAI
@@ -14,16 +14,9 @@ novita_client = OpenAI(
     api_key="sk_koHg-4Cip9AK4shJxPJhjKSM10tCdwLysoAbW85YSaU",  # Replace with your valid key
 )
 
-model = "google/gemma-3-27b-it"
+model = "deepseek/deepseek-v3-turbo"
 stream = False  # Set to True if you want to handle streaming
 app = FastAPI()
-
-GROQ_API_KEY = "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"
-
-# Initialize GROQ client
-client = Groq(
-    api_key=GROQ_API_KEY,
-)
 
 # Enable CORS
 app.add_middleware(
@@ -34,8 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Set up Jinja2 templates using the relative path (from backend to frontend)
-templates = Jinja2Templates(directory="frontend")
+# Set up Jinja2 templates using the path to frontend directory
+templates = Jinja2Templates(directory="../frontend")
 
 class SignupModel(BaseModel):
     email: EmailStr
@@ -84,7 +77,9 @@ async def signin_post(email: EmailStr = Form(...), password: str = Form(...)):
     user = await get_user_by_credentials(email, password)
     if user:
         # redirect with user id to show only that user's chat history
-        return RedirectResponse(url=f"/welcome?user_id={user['_id']}", status_code=303)
+        # Convert ObjectId to string for URL
+        user_id_str = str(user['_id'])
+        return RedirectResponse(url=f"/welcome?user_id={user_id_str}", status_code=303)
     else:
         return RedirectResponse(url="/signin?error=Invalid credentials", status_code=303)
 
@@ -96,6 +91,8 @@ async def welcome(request: Request):
 
 @app.post("/ask-devops-doubt")
 async def ask_devops_doubt(request: QueryRequest):
+    print(f"Received request with user_id: {request.user_id} and message: {request.message[:20]}...")
+    
     system_prompt = """
     You are a helpful assistant that solves doubts about the DevOps class taught by Sir Qasim Malik...
     (Include the full original system prompt here)
@@ -128,7 +125,32 @@ async def ask_devops_doubt(request: QueryRequest):
             raise HTTPException(status_code=500, detail="Invalid response format from Novita AI.")
 
     # Save question and answer to DB
-    await save_chat(request.user_id, request.message, "user")
-    await save_chat(request.user_id, response, "bot")
+    user_save_result = await save_chat(request.user_id, request.message, "user")
+    bot_save_result = await save_chat(request.user_id, response, "bot")
+    
+    print(f"Save results - User message: {user_save_result}, Bot message: {bot_save_result}")
 
     return {"response": response}
+
+@app.get("/chat-history")
+async def get_user_chat_history(user_id: str):
+    """Endpoint to retrieve chat history for a specific user"""
+    print(f"Chat history endpoint called with user_id: {user_id}")
+    
+    if not user_id:
+        print("Warning: Empty user_id received")
+        return {"history": [], "error": "No user ID provided"}
+    
+    try:
+        history = await get_chat_history(user_id)
+        print(f"Returning {len(history)} messages for user {user_id}")
+        
+        # Display first few messages for debugging
+        if history:
+            for i, msg in enumerate(history[:2]):
+                print(f"Message {i+1}: {msg.get('sender')}: {msg.get('message')[:30]}...")
+        
+        return {"history": history}
+    except Exception as e:
+        print(f"Error in chat history endpoint: {str(e)}")
+        return {"history": [], "error": str(e)}

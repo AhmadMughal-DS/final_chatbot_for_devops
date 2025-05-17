@@ -128,15 +128,13 @@
         />
         <button id="sendBtn">Send</button>
       </div>
-    </div>
-
-    <script>
+    </div>    <script>
       const userId = "{{ user_id }}";
       const chatMessages = document.getElementById("chatMessages");
       const userInput = document.getElementById("userInput");
       const sendBtn = document.getElementById("sendBtn");
-
-      function appendMessage(message, className, isUser) {
+      
+      console.log("User ID set to:", userId);      function appendMessage(message, className, isUser) {
         const messageContainer = document.createElement("div");
         messageContainer.classList.add(
           "message-container",
@@ -161,11 +159,13 @@
         chatMessages.appendChild(messageContainer);
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
-
+      
       async function loadHistory() {
         try {
+          console.log("Loading chat history for user ID:", userId);
           const res = await fetch(`/chat-history?user_id=${userId}`);
           const data = await res.json();
+          console.log("Chat history response:", data);
           if (data.history && data.history.length) {
             data.history.forEach((entry) => {
               appendMessage(
@@ -180,23 +180,26 @@
         }
       }
 
-      document.addEventListener("DOMContentLoaded", loadHistory);
-
-      sendBtn.addEventListener("click", async () => {
+      document.addEventListener("DOMContentLoaded", loadHistory);sendBtn.addEventListener("click", async () => {
         const message = userInput.value.trim();
         if (message === "") return;
         appendMessage(message, "user-message", true);
         userInput.value = "";
 
         try {
+          console.log("Sending message to API with user ID:", userId);
+          const payload = { user_id: userId, message: message };
+          console.log("Request payload:", payload);
+          
           const response = await fetch("/ask-devops-doubt", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ user_id: userId, message: message }),
+            body: JSON.stringify(payload),
           });
           const data = await response.json();
+          console.log("API response:", data);
           appendMessage(data.response, "bot-message", false);
         } catch (error) {
           appendMessage("Error retrieving answer.", "bot-message", false);

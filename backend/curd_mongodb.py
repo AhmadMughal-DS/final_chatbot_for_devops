@@ -24,19 +24,43 @@ async def get_user_by_credentials(email: str, password: str):
 
 async def save_chat(user_id, message, sender):
     """Save a chat message for a specific user."""
-    chat_entry = {
-        "user_id": user_id,
-        "message": message,
-        "sender": sender,  # "user" or "bot"
-        "timestamp": datetime.utcnow()
-    }
-    await db.chat_history.insert_one(chat_entry)
+    try:
+        print(f"Saving chat: user_id={user_id}, sender={sender}, message={message[:20]}...")
+        
+        # No conversion - store as string for consistency
+        chat_entry = {
+            "user_id": str(user_id),  # Always store as string
+            "message": message,
+            "sender": sender,  # "user" or "bot"
+            "timestamp": datetime.utcnow()
+        }
+        result = await db.chat_history.insert_one(chat_entry)
+        print(f"Chat saved with ID: {result.inserted_id}")
+        return True
+    except Exception as e:
+        print(f"Error saving chat: {str(e)}")
+        return False
 
 async def get_chat_history(user_id):
     """Retrieve chat history for a specific user."""
-    chats = await db.chat_history.find({"user_id": user_id}).sort("timestamp", 1).to_list(None)
-    for chat in chats:
-        # Convert ObjectId and datetime for JSON serialization
-        chat['_id'] = str(chat['_id'])
-        chat['timestamp'] = chat['timestamp'].isoformat() if chat.get('timestamp') else None
-    return chats
+    try:
+        print(f"Getting chat history for user_id: {user_id}")
+        
+        # Always query by string ID for consistency
+        user_id_str = str(user_id)
+        print(f"Using string user_id for query: {user_id_str}")
+        
+        query = {"user_id": user_id_str}
+        print(f"Executing query: {query}")
+        
+        chats = await db.chat_history.find(query).sort("timestamp", 1).to_list(None)
+        print(f"Found {len(chats)} chat messages")
+        
+        for chat in chats:
+            # Convert ObjectId and datetime for JSON serialization
+            chat['_id'] = str(chat['_id'])
+            chat['timestamp'] = chat['timestamp'].isoformat() if chat.get('timestamp') else None
+        return chats
+    except Exception as e:
+        print(f"Error retrieving chat history: {str(e)}")
+        return []
