@@ -159,6 +159,8 @@ app.add_middleware(
 
 # Set up Jinja2 templates using the path to frontend directory
 template_path = os.path.abspath("frontend")  # or "../frontend" if neede
+
+# to go up a directory
 print(f"Resolved template path: {template_path}")
 
 templates = Jinja2Templates(directory=template_path)
