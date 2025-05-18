@@ -1,15 +1,14 @@
-# Step 1: Base Image Choose Karna (Python Image)
-FROM python:3.11
+# Dockerfile (root of your repo)
+FROM python:3.11-slim
 
-# Step 2: Working Directory Set Karna
 WORKDIR /app
 
-# Step 3: Local Python files ko Docker container mein copy karna
+# 1) Copy only requirements, install them
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 2) Now copy the rest of your application
 COPY . .
 
-# Step 4: Python Dependencies Install Karna
-RUN pip install -r requirements.txt
-
-# Step : Backend app ko run karna
+# 3) Start Uvicorn
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
