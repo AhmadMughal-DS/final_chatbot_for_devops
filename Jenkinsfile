@@ -5,6 +5,9 @@ pipeline {
         COMPOSE_PROJECT_NAME = "jenkins_chatbot"
     }
 
+
+
+
     stages {
         stage('Build and Run App') {
             steps {
