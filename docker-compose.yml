@@ -2,7 +2,12 @@ version: '3.8'
 
 services:
   backend:
-    image: ahmad928/backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend
     ports:
       - "8000:8000"
+    volumes:
+      - .:/app  # Optional: Sync code changes without rebuilding
     restart: unless-stopped
