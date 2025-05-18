@@ -158,7 +158,10 @@ app.add_middleware(
 )
 
 # Set up Jinja2 templates using the path to frontend directory
-templates = Jinja2Templates(directory="../frontend")
+template_path = os.path.abspath("frontend")  # or "../frontend" if neede
+print(f"Resolved template path: {template_path}")
+
+templates = Jinja2Templates(directory=template_path)
 
 class SignupModel(BaseModel):
     email: EmailStr
