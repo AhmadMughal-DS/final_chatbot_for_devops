@@ -1,13 +1,12 @@
 version: '3.8'
-
 services:
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: backend
+    container_name: devops-assistant
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
-      - .:/app  # Optional: Sync code changes without rebuilding
+      - .:/app       # Attach source code as a volume
     restart: unless-stopped
