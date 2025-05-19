@@ -166,6 +166,9 @@ print(f"Resolved template path: {template_path}")
 
 templates = Jinja2Templates(directory=template_path)
 
+
+
+# add webhook
 class SignupModel(BaseModel):
     email: EmailStr
     password: str
