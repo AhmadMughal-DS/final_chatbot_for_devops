@@ -15,19 +15,25 @@ pipeline {
     stage('Build & Start') {
       steps {
         timeout(time: 100, unit: 'MINUTES') {
-          sh """
-            # fail early if docker itself isn't present
-            if ! command -v docker &> /dev/null; then
-              echo "ERROR: docker not found"
+          sh '''
+            #— Verify docker CLI is available
+            if ! command -v docker >/dev/null 2>&1; then
+              echo "ERROR: docker not found in PATH"
               exit 1
             fi
 
-            # now use the v2 plugin sub-command
+            #— Verify Compose v2 plugin is available
+            if ! docker compose version >/dev/null 2>&1; then
+              echo "ERROR: docker compose plugin not available"
+              exit 1
+            fi
+
+            #— Build & run
             docker compose \
               --project-name "$COMPOSE_PROJECT_NAME" \
               --file docker-compose.yml \
               up --build -d
-          """
+          '''
         }
       }
     }
@@ -35,13 +41,13 @@ pipeline {
 
   post {
     always {
-      sh """
-        # gracefully tear down; ignore errors
+      sh '''
+        #— Tear down (ignore errors)
         docker compose \
           --project-name "$COMPOSE_PROJECT_NAME" \
           --file docker-compose.yml \
           down || true
-      """
+      '''
       echo "✅ Pipeline completed!"
     }
   }
