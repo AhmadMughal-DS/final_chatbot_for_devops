@@ -1,4 +1,4 @@
-pipeline {
+pipeline { 
   agent any
 
   environment {
@@ -8,9 +8,8 @@ pipeline {
   stages {
     stage('Build and Run App') {
       steps {
-        // fail if takes longer than 10 minutes
         timeout(time: 100, unit: 'MINUTES') {
-          sh 'docker-compose -p $COMPOSE_PROJECT_NAME -f docker-compose.yml up --build -d'
+          sh "docker-compose -p $COMPOSE_PROJECT_NAME -f docker-compose.yml up --build -d"
         }
       }
     }
