@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: devops-assistant
     ports:
-      - "8001:8000"
+      - "8000:8000"
     volumes:
       - .:/app       # Attach source code as a volume
     restart: unless-stopped
