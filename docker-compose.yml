@@ -10,4 +10,4 @@ services:
     volumes:
       - .:/app       # Attach source code as a volume
     restart: unless-stopped
-    network_mode: "host"
+    
