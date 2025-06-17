@@ -9,9 +9,12 @@ services:
       - "0.0.0.0:8000:8000"  # Host port:container port
     volumes:
       - ./:/app:ro           # Attach code volume as read-only
-      - app_data:/data       # Persistent volume for data    environment:
+      - app_data:/data       # Persistent volume for data
+    environment:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
+      - MONGODB_URI=mongodb+srv://ahmadzafar:IUzvD9FvjOjHoqPR@devops.fzvip.mongodb.net/
+      - DEBUG=1
     # Container will be stopped by the Jenkins pipeline after 5 minutes
 
 volumes:

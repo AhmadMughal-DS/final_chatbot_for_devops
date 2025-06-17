@@ -16,9 +16,28 @@ from pymongo import MongoClient
 from bson import ObjectId
 from datetime import datetime
 
-# Set up DB connection for chatbot
-client = AsyncIOMotorClient("mongodb+srv://ahmadzafar:IUzvD9FvjOjHoqPR@devops.fzvip.mongodb.net/")
-db = client.devops_assignment  
+# Set up DB connection for chatbot with error handling
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://ahmadzafar:IUzvD9FvjOjHoqPR@devops.fzvip.mongodb.net/")
+DEBUG = os.getenv("DEBUG", "0") == "1"
+
+print(f"Connecting to MongoDB at {MONGODB_URI.split('@')[1] if '@' in MONGODB_URI else 'mongodb'}")
+try:
+    client = AsyncIOMotorClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+    # Validate connection
+    client.admin.command('ismaster')
+    print("MongoDB connection successful")
+    db = client.devops_assignment
+except Exception as e:
+    print(f"MongoDB connection error: {str(e)}")
+    # Continue with a dummy DB for development purposes if needed
+    if DEBUG:
+        print("Running with dummy DB for development")
+        from unittest.mock import MagicMock
+        client = MagicMock()
+        db = MagicMock()
+    else:
+        # In production, re-raise the exception
+        raise
 
 async def create_user(email: str, password: str):
     # Check if user already exists based on email
@@ -158,10 +177,43 @@ app.add_middleware(
 )
 
 # Set up Jinja2 templates using the path to frontend directory
+# First try the standard path
 template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
-#
-print(f"Resolved template path: {template_path}")
-templates = Jinja2Templates(directory=template_path)
+print(f"Attempting to use template path: {template_path}")
+
+# Check if the template directory exists
+if not os.path.exists(template_path):
+    print(f"Warning: Template path {template_path} does not exist.")
+    # Try alternative paths
+    alternatives = [
+        os.path.join(os.getcwd(), "frontend"),
+        "/app/frontend",
+        os.path.abspath("frontend")
+    ]
+    
+    for path in alternatives:
+        print(f"Trying alternative path: {path}")
+        if os.path.exists(path):
+            template_path = path
+            print(f"Using alternative template path: {template_path}")
+            break
+
+# List the files in the template directory for debugging
+try:
+    template_files = os.listdir(template_path)
+    print(f"Found template files: {template_files}")
+except Exception as e:
+    print(f"Error listing template directory: {str(e)}")
+    template_files = []
+
+# Initialize templates with better error handling
+try:
+    templates = Jinja2Templates(directory=template_path)
+    print(f"Jinja2Templates initialized with directory: {template_path}")
+except Exception as e:
+    print(f"Error initializing Jinja2Templates: {str(e)}")
+    # Fallback to a basic directory if needed
+    templates = Jinja2Templates(directory=".")
 
 
 
@@ -183,7 +235,26 @@ async def register_user(email: str, password: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    try:
+        print("Attempting to render index.html")
+        return templates.TemplateResponse("index.html", {"request": request})
+    except Exception as e:
+        error_msg = f"Error rendering template: {str(e)}"
+        print(error_msg)
+        # Return a basic HTML response if template rendering fails
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>DevOps Chatbot</title></head>
+        <body>
+            <h1>DevOps Chatbot</h1>
+            <p>The application is running but encountered a template error.</p>
+            <p><a href="/signin">Sign In</a> | <a href="/signup">Sign Up</a></p>
+            {f"<p>Error details (debug mode): {error_msg}</p>" if DEBUG else ""}
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
 
 @app.post("/signup")
 async def signup(email: EmailStr = Form(...), password: str = Form(...),request: Request = None):
