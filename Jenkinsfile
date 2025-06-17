@@ -1,8 +1,6 @@
 pipeline {
-    // Use Docker pipeline plugin to get proper Docker permissions
-    agent {
-        label 'docker'
-    }
+    // Use any available agent instead of requiring a specific label
+    agent any
     
     environment {
         PROJECT_NAME = 'devops_chatbot_ci'
@@ -46,17 +44,30 @@ pipeline {
                 sh 'python3 -m pytest -v || python -m pytest -v || echo "No tests available, continuing..."'
             }
         }
-        
-        stage('Fix Docker Permissions') {
+          stage('Fix Docker Permissions') {
             steps {
                 echo 'Setting up Docker permissions'
                 // This step ensures Jenkins user can use Docker
                 sh '''
-                    # Add Jenkins to docker group if needed
+                    # Check Docker socket existence and fix permissions
                     if [ -S /var/run/docker.sock ]; then
+                        echo "Docker socket exists. Attempting to fix permissions..."
                         sudo chmod 666 /var/run/docker.sock || true
                         echo "Docker socket permissions updated"
+                    else
+                        echo "Docker socket not found at /var/run/docker.sock"
+                        # Try to find Docker socket in alternate locations
+                        DOCKER_SOCK=$(find /var/run -name "docker.sock" 2>/dev/null || echo "")
+                        if [ -n "$DOCKER_SOCK" ]; then
+                            echo "Found Docker socket at $DOCKER_SOCK"
+                            sudo chmod 666 $DOCKER_SOCK || true
+                        else
+                            echo "No Docker socket found. Docker may not be installed correctly."
+                        fi
                     fi
+                    
+                    # Try to use docker without sudo as a test
+                    docker info > /dev/null 2>&1 && echo "Docker is accessible without sudo" || echo "Docker still requires sudo"
                 '''
             }
         }
