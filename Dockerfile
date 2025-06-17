@@ -10,11 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 2) Now copy the rest of your application
 COPY . .
 
-# Make sure frontend directory exists and create if needed
-RUN mkdir -p /app/frontend
-
-# Copy frontend files specifically (in case they weren't copied in the COPY . . step)
-COPY ./frontend/*.html /app/frontend/
+# Do not create a separate frontend directory or copy files
+# The original frontend folder at /app/frontend will be used directly
 
 # Verify the contents
 RUN echo "Contents of the workspace:" && ls -la && \

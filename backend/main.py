@@ -177,25 +177,41 @@ app.add_middleware(
 )
 
 # Set up Jinja2 templates using the path to frontend directory
-# In Docker, frontend files are explicitly at /app/frontend, so prioritize that path
-template_path = "/app/frontend"
+# Try multiple possible frontend directory locations in order of likelihood
 
-# Only if running locally outside Docker, try to find the frontend directory
-if not os.path.exists(template_path) or not os.listdir(template_path):
-    print(f"Frontend directory not found at {template_path}, trying alternative paths...")
-    alternatives = [
-        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend"),
-        os.path.join(os.getcwd(), "frontend"),
-        os.path.abspath("frontend"),
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
-    ]
-    
-    for path in alternatives:
-        print(f"Trying alternative path: {path}")
-        if os.path.exists(path) and os.listdir(path):
-            template_path = path
-            print(f"Using alternative template path: {template_path}")
-            break
+frontend_paths = [
+    # Docker path when running in container
+    "/app/frontend",
+    # Local development paths
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend"),
+    os.path.join(os.getcwd(), "frontend"),
+    os.path.abspath("frontend"),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
+]
+
+template_path = None
+for path in frontend_paths:
+    print(f"Checking template path: {path}")
+    if os.path.exists(path) and os.path.isdir(path):
+        try:
+            # List directory contents to verify it's accessible
+            contents = os.listdir(path)
+            if contents:
+                print(f"Found templates at: {path}, contents: {contents}")
+                template_path = path
+                break
+            else:
+                print(f"Directory exists but is empty: {path}")
+        except Exception as e:
+            print(f"Error accessing directory {path}: {str(e)}")
+
+# If no valid directory found, use a default and warn
+if not template_path:
+    print("WARNING: No valid template directory found!")
+    template_path = "/app/frontend"  # Use this as fallback
+    print(f"Using fallback template path: {template_path}")
+else:
+    print(f"Selected template path: {template_path}")
 
 # Show the contents of the directory for debugging
 print(f"Final template path: {template_path}")
@@ -344,8 +360,70 @@ except Exception as e:
     print(f"Error examining template directory: {str(e)}")
     template_files = []
 
-# Initialize templates
-templates = Jinja2Templates(directory=template_path)
+# Initialize templates with error handling
+try:
+    templates = Jinja2Templates(directory=template_path)
+    print(f"Successfully initialized templates from {template_path}")
+    
+    # Verify critical templates exist
+    critical_templates = ["welcome.html", "signin.html", "signup.html", "index.html"]
+    for template in critical_templates:
+        template_file = os.path.join(template_path, template)
+        if os.path.exists(template_file):
+            print(f"✅ Template exists: {template}")
+        else:
+            print(f"❌ Missing template: {template}")
+            # Create a basic version of the template
+            try:
+                with open(template_file, 'w') as f:
+                    f.write(f'''
+                    <!DOCTYPE html>
+                    <html>
+                    <head><title>DevOps Chatbot - {template}</title></head>
+                    <body>
+                        <h1>DevOps Chatbot - {template.split('.')[0].title()}</h1>
+                        <p>This is an automatically generated template.</p>
+                        <p>
+                            <a href="/">Home</a> | 
+                            <a href="/signin">Sign In</a> | 
+                            <a href="/signup">Sign Up</a>
+                        </p>
+                        <p>{{{{ request }}}} - {{{{ user_id or '' }}}}</p>
+                    </body>
+                    </html>
+                    ''')
+                print(f"Created basic template for {template}")
+            except Exception as e:
+                print(f"Error creating template {template}: {str(e)}")
+except Exception as e:
+    print(f"Error initializing templates: {str(e)}")
+    # Create a minimal templates object that will return static HTML
+    from fastapi.templating import _TemplateResponse
+    
+    class FallbackTemplates:
+        def __init__(self):
+            self.directory = "fallback"
+            
+        def TemplateResponse(self, name, context, status_code=200):
+            content = f'''
+            <!DOCTYPE html>
+            <html>
+            <head><title>DevOps Chatbot - Fallback</title></head>
+            <body>
+                <h1>DevOps Chatbot</h1>
+                <p>Template {name} could not be loaded.</p>
+                <p>
+                    <a href="/">Home</a> | 
+                    <a href="/signin">Sign In</a> | 
+                    <a href="/signup">Sign Up</a>
+                </p>
+                <p>Context: {context.get("user_id", "") if "user_id" in context else ""}</p>
+            </body>
+            </html>
+            '''
+            return HTMLResponse(content=content, status_code=status_code)
+    
+    templates = FallbackTemplates()
 
 
 
