@@ -1,13 +1,19 @@
 version: '3.8'
 services:
-  backend:
+  backend_service:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: devops-assistant
+    container_name: devops_chatbot_backend
     ports:
-      - "0.0.0.0:8000:8000"
+      - "0.0.0.0:8000:8000"  # Using different port number as required (8000)
     volumes:
-      - .:/app       # Attach source code as a volume
+      - ./:/app:ro           # Attach code volume as read-only
+      - app_data:/data       # Persistent volume for data
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    
+
+volumes:
+  app_data:  # Define the volume

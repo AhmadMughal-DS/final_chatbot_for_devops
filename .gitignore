@@ -1,3 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 .venv/
-.backend/__pycache__
-.frontend/__pycache__
+venv/
+ENV/
+env/
+.env
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+bin/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker
+.docker/
+docker-compose.override.yml
+*.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+*.log
+logs/
+log/
+
+# Local development
+*.sqlite3
+*.db
+*.sql
+*.sqlite
+
+# Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next/
+.nuxt/
+dist/
+build/
+.cache/
+.parcel-cache/
+
+# Jenkins
+.jenkins/
+workspace/
+jobs/
+plugins/
+nodes/
+config.xml
+credentials.xml
+
+# System Files
+.DS_Store
+Thumbs.db
