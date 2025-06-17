@@ -182,7 +182,7 @@ templates = Jinja2Templates(directory=template_path)
 
 print(f"Using template directory: {template_path}")
 print(f"Available templates: {os.listdir(template_path)}")
-print("for push 1")
+print("for push 2")
 # Initialize templates with error handling
 try:
     templates = Jinja2Templates(directory=template_path)
