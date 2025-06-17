@@ -177,43 +177,58 @@ app.add_middleware(
 )
 
 # Set up Jinja2 templates using the path to frontend directory
-# First try the standard path
-template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
-print(f"Attempting to use template path: {template_path}")
+# In Docker, frontend files are explicitly at /app/frontend, so prioritize that path
+template_path = "/app/frontend"
 
-# Check if the template directory exists
-if not os.path.exists(template_path):
-    print(f"Warning: Template path {template_path} does not exist.")
-    # Try alternative paths
+# Only if running locally outside Docker, try to find the frontend directory
+if not os.path.exists(template_path) or not os.listdir(template_path):
+    print(f"Frontend directory not found at {template_path}, trying alternative paths...")
     alternatives = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend"),
         os.path.join(os.getcwd(), "frontend"),
-        "/app/frontend",
-        os.path.abspath("frontend")
+        os.path.abspath("frontend"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
     ]
     
     for path in alternatives:
         print(f"Trying alternative path: {path}")
-        if os.path.exists(path):
+        if os.path.exists(path) and os.listdir(path):
             template_path = path
             print(f"Using alternative template path: {template_path}")
             break
 
-# List the files in the template directory for debugging
+# Show the contents of the directory for debugging
+print(f"Final template path: {template_path}")
 try:
     template_files = os.listdir(template_path)
     print(f"Found template files: {template_files}")
+    
+    # Check if index.html exists specifically
+    if 'index.html' not in template_files:
+        print("WARNING: index.html not found in template directory!")
+        
+        # Try to create a basic index.html if missing
+        if os.access(template_path, os.W_OK):
+            print("Creating a basic index.html file...")
+            with open(os.path.join(template_path, 'index.html'), 'w') as f:
+                f.write('''
+                <!DOCTYPE html>
+                <html>
+                <head><title>DevOps Chatbot</title></head>
+                <body>
+                    <h1>DevOps Chatbot</h1>
+                    <p>Welcome to the DevOps Chatbot.</p>
+                    <p><a href="/signin">Sign In</a> | <a href="/signup">Sign Up</a></p>
+                </body>
+                </html>
+                ''')
+            print("Basic index.html created.")
 except Exception as e:
-    print(f"Error listing template directory: {str(e)}")
+    print(f"Error examining template directory: {str(e)}")
     template_files = []
 
-# Initialize templates with better error handling
-try:
-    templates = Jinja2Templates(directory=template_path)
-    print(f"Jinja2Templates initialized with directory: {template_path}")
-except Exception as e:
-    print(f"Error initializing Jinja2Templates: {str(e)}")
-    # Fallback to a basic directory if needed
-    templates = Jinja2Templates(directory=".")
+# Initialize templates
+templates = Jinja2Templates(directory=template_path)
 
 
 
