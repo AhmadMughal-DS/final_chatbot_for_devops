@@ -203,15 +203,19 @@ try:
     template_files = os.listdir(template_path)
     print(f"Found template files: {template_files}")
     
-    # Check if index.html exists specifically
-    if 'index.html' not in template_files:
-        print("WARNING: index.html not found in template directory!")
+    # Check for required template files
+    required_templates = ['index.html', 'signin.html', 'signup.html', 'welcome.html', 'chat.html']
+    missing_templates = [t for t in required_templates if t not in template_files]
+    
+    if missing_templates:
+        print(f"WARNING: Missing template files: {missing_templates}")
         
-        # Try to create a basic index.html if missing
+        # Create basic versions of missing templates if directory is writable
         if os.access(template_path, os.W_OK):
-            print("Creating a basic index.html file...")
-            with open(os.path.join(template_path, 'index.html'), 'w') as f:
-                f.write('''
+            print(f"Attempting to create missing template files: {missing_templates}")
+            
+            template_contents = {
+                'index.html': '''
                 <!DOCTYPE html>
                 <html>
                 <head><title>DevOps Chatbot</title></head>
@@ -221,8 +225,121 @@ try:
                     <p><a href="/signin">Sign In</a> | <a href="/signup">Sign Up</a></p>
                 </body>
                 </html>
-                ''')
-            print("Basic index.html created.")
+                ''',
+                'signin.html': '''
+                <!DOCTYPE html>
+                <html>
+                <head><title>DevOps Chatbot - Sign In</title></head>
+                <body>
+                    <h1>Sign In</h1>
+                    <form method="post" action="/signin">
+                        <div><label>Email: <input type="email" name="email" required></label></div>
+                        <div><label>Password: <input type="password" name="password" required></label></div>
+                        <div><button type="submit">Sign In</button></div>
+                    </form>
+                    <p><a href="/">Back to Home</a> | <a href="/signup">Sign Up</a></p>
+                    {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+                </body>
+                </html>
+                ''',
+                'signup.html': '''
+                <!DOCTYPE html>
+                <html>
+                <head><title>DevOps Chatbot - Sign Up</title></head>
+                <body>
+                    <h1>Sign Up</h1>
+                    <form method="post" action="/signup">
+                        <div><label>Email: <input type="email" name="email" required></label></div>
+                        <div><label>Password: <input type="password" name="password" required></label></div>
+                        <div><button type="submit">Sign Up</button></div>
+                    </form>
+                    <p><a href="/">Back to Home</a> | <a href="/signin">Sign In</a></p>
+                    {% if error %}<p style="color: red;">{{ error }}</p>{% endif %}
+                </body>
+                </html>
+                ''',
+                'welcome.html': '''
+                <!DOCTYPE html>
+                <html>
+                <head><title>DevOps Chatbot - Welcome</title></head>
+                <body>
+                    <h1>Welcome to DevOps Chatbot</h1>
+                    <p>You have successfully signed in.</p>
+                    <p><a href="/chat.html?user_id={{ user_id }}">Start Chatting</a> | <a href="/signin">Sign Out</a></p>
+                </body>
+                </html>
+                ''',
+                'chat.html': '''
+                <!DOCTYPE html>
+                <html>
+                <head><title>DevOps Chatbot - Chat</title></head>
+                <body>
+                    <h1>DevOps Chatbot</h1>
+                    <div id="chat-container">
+                        <div id="chat-messages"></div>
+                        <div id="chat-input">
+                            <input type="text" id="message" placeholder="Ask a question...">
+                            <button onclick="sendMessage()">Send</button>
+                        </div>
+                    </div>
+                    <script>
+                        // Basic chat functionality
+                        function sendMessage() {
+                            const message = document.getElementById('message').value;
+                            if (message) {
+                                // Add user message
+                                addMessage('You', message);
+                                document.getElementById('message').value = '';
+                                
+                                // Get user ID from URL
+                                const urlParams = new URLSearchParams(window.location.search);
+                                const userId = urlParams.get('user_id') || '';
+                                
+                                // Send to API
+                                fetch('/ask-devops-doubt', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        user_id: userId,
+                                        message: message
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    addMessage('Bot', data.response);
+                                })
+                                .catch(error => {
+                                    addMessage('System', 'Error: ' + error.message);
+                                });
+                            }
+                        }
+                        
+                        function addMessage(sender, text) {
+                            const messagesDiv = document.getElementById('chat-messages');
+                            messagesDiv.innerHTML += `<p><strong>${sender}:</strong> ${text}</p>`;
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        }
+                    </script>
+                </body>
+                </html>
+                '''
+            }
+            
+            for template_name in missing_templates:
+                if template_name in template_contents:
+                    try:
+                        print(f"Creating {template_name}...")
+                        with open(os.path.join(template_path, template_name), 'w') as f:
+                            f.write(template_contents[template_name])
+                        print(f"{template_name} created successfully")
+                    except Exception as template_e:
+                        print(f"Error creating {template_name}: {str(template_e)}")
+            
+            # Verify created files
+            template_files = os.listdir(template_path)
+            print(f"Updated template files list: {template_files}")
 except Exception as e:
     print(f"Error examining template directory: {str(e)}")
     template_files = []
@@ -272,43 +389,178 @@ async def read_root(request: Request):
         return HTMLResponse(content=html_content)
 
 @app.post("/signup")
-async def signup(email: EmailStr = Form(...), password: str = Form(...),request: Request = None):
-    # Try creating a new user. If the user exists, create_user returns None.
-    user = await create_user(email, password)
-    
-    if not user:
-        print(f"User already exists: {email}")
+async def signup(email: EmailStr = Form(...), password: str = Form(...), request: Request = None):
+    try:
+        print(f"Processing signup for email: {email}")
+        
+        # Add fallback for missing Request object (debugging purposes)
+        if request is None:
+            print("WARNING: Request object is None, creating a mock request")
+            from fastapi.testclient import TestClient
+            test_client = TestClient(app)
+            request = test_client.get("/").request
+        
+        # Try creating a new user. If the user exists, create_user returns None.
+        user = await create_user(email, password)
+        
+        if not user:
+            print(f"User already exists: {email}")
+            return templates.TemplateResponse(
+                "signup.html", 
+                {"request": request, "error": "This email is already registered. Please log in."}
+            )
+        
+        print(f"User created: {user}")
+        return RedirectResponse(url="/signin", status_code=303)
+    except Exception as e:
+        error_msg = f"Error during signup: {str(e)}"
+        print(error_msg)
+        if DEBUG:
+            print(f"Error details: {repr(e)}")
+            import traceback
+            traceback.print_exc()
+        
+        # Return a graceful error response
         return templates.TemplateResponse(
             "signup.html", 
-            {"request": request, "error": "This email is already registered. Please log in."}
+            {"request": request, "error": "An error occurred during signup. Please try again."}
         )
-        
-    print(f"User created: {user}")
-    return RedirectResponse(url="/signin", status_code=303)
 
 @app.get("/signup", response_class=HTMLResponse)
 async def get_signup(request: Request):
-    return templates.TemplateResponse("signup.html", {"request": request})
+    try:
+        print("Rendering signup.html template")
+        return templates.TemplateResponse("signup.html", {"request": request})
+    except Exception as e:
+        error_msg = f"Error rendering signup template: {str(e)}"
+        print(error_msg)
+        if DEBUG:
+            import traceback
+            traceback.print_exc()
+        
+        # Return a basic HTML response if template rendering fails
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>DevOps Chatbot - Sign Up</title></head>
+        <body>
+            <h1>Sign Up</h1>
+            <p>Please enter your email and password to create an account.</p>
+            <form method="post" action="/signup">
+                <div><label>Email: <input type="email" name="email" required></label></div>
+                <div><label>Password: <input type="password" name="password" required></label></div>
+                <div><button type="submit">Sign Up</button></div>
+            </form>
+            <p><a href="/">Back to Home</a> | <a href="/signin">Sign In</a></p>
+            {f"<p>Error details (debug mode): {error_msg}</p>" if DEBUG else ""}
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
 
 @app.get("/signin", response_class=HTMLResponse)
 async def get_signin(request: Request):
-    return templates.TemplateResponse("signin.html", {"request": request})
+    try:
+        print("Rendering signin.html template")
+        # Check if there's an error message in the query parameters
+        error = request.query_params.get("error", "")
+        return templates.TemplateResponse("signin.html", {"request": request, "error": error})
+    except Exception as e:
+        error_msg = f"Error rendering signin template: {str(e)}"
+        print(error_msg)
+        if DEBUG:
+            import traceback
+            traceback.print_exc()
+        
+        # Return a basic HTML response if template rendering fails
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>DevOps Chatbot - Sign In</title></head>
+        <body>
+            <h1>Sign In</h1>
+            <p>Please enter your credentials to sign in.</p>
+            <form method="post" action="/signin">
+                <div><label>Email: <input type="email" name="email" required></label></div>
+                <div><label>Password: <input type="password" name="password" required></label></div>
+                <div><button type="submit">Sign In</button></div>
+            </form>
+            <p><a href="/">Back to Home</a> | <a href="/signup">Sign Up</a></p>
+            {f"<p>Error details (debug mode): {error_msg}</p>" if DEBUG else ""}
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
 
 @app.post("/signin")
-async def signin_post(email: EmailStr = Form(...), password: str = Form(...)):
-    user = await get_user_by_credentials(email, password)
-    if user:
-        # redirect with user id to show only that user's chat history
-        # Convert ObjectId to string for URL
-        user_id_str = str(user['_id'])
-        return RedirectResponse(url=f"/welcome?user_id={user_id_str}", status_code=303)
-    else:
+async def signin_post(email: EmailStr = Form(...), password: str = Form(...), request: Request = None):
+    try:
+        print(f"Processing signin for email: {email}")
+        
+        user = await get_user_by_credentials(email, password)
+        if user:
+            # Convert ObjectId to string for URL
+            try:
+                user_id_str = str(user['_id'])
+                print(f"User authenticated successfully. ID: {user_id_str}")
+                return RedirectResponse(url=f"/welcome?user_id={user_id_str}", status_code=303)
+            except Exception as e:
+                print(f"Error converting user ID: {str(e)}")
+                if DEBUG:
+                    print(f"User object: {user}")
+                # Fall through to error message
+        
+        print("Authentication failed: Invalid credentials")
         return RedirectResponse(url="/signin?error=Invalid credentials", status_code=303)
+    except Exception as e:
+        error_msg = f"Error during signin: {str(e)}"
+        print(error_msg)
+        if DEBUG:
+            print(f"Error details: {repr(e)}")
+            import traceback
+            traceback.print_exc()
+        
+        # If request is available, return template response
+        if request:
+            return templates.TemplateResponse(
+                "signin.html", 
+                {"request": request, "error": "An error occurred during sign in. Please try again."}
+            )
+        # Otherwise fall back to redirect
+        return RedirectResponse(url="/signin?error=System error", status_code=303)
 
 @app.get("/welcome", response_class=HTMLResponse)
 async def welcome(request: Request):
-    user_id = request.query_params.get("user_id", "")
-    return templates.TemplateResponse("welcome.html", {"request": request, "user_id": user_id})
+    try:
+        user_id = request.query_params.get("user_id", "")
+        print(f"Welcome route accessed with user_id: {user_id}")
+        
+        if not user_id:
+            print("No user_id provided, redirecting to signin")
+            return RedirectResponse(url="/signin", status_code=303)
+        
+        return templates.TemplateResponse("welcome.html", {"request": request, "user_id": user_id})
+    except Exception as e:
+        error_msg = f"Error rendering welcome template: {str(e)}"
+        print(error_msg)
+        if DEBUG:
+            import traceback
+            traceback.print_exc()
+        
+        # Return a basic HTML response if template rendering fails
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>DevOps Chatbot - Welcome</title></head>
+        <body>
+            <h1>Welcome to DevOps Chatbot</h1>
+            <p>You have successfully signed in.</p>
+            <p><a href="/">Home</a> | <a href="/signin">Sign Out</a></p>
+            {f"<p>Error details (debug mode): {error_msg}</p>" if DEBUG else ""}
+        </body>
+        </html>
+        """
+        return HTMLResponse(content=html_content)
 
 
 @app.post("/ask-devops-doubt")
