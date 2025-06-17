@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./frontend:/app/frontend:ro  # Mount only the frontend directory specifically
+      - ./frontend:/app/frontend  # Mount the existing frontend directory
       - app_data:/data               # Persistent volume for data
     environment:
       - PYTHONDONTWRITEBYTECODE=1
