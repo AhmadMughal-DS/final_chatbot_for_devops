@@ -19,22 +19,20 @@ pipeline {
                 git branch: 'main', url: "${GITHUB_REPO}"
             }
         }
-        
-        stage('Setup Python') {
+          stage('Setup Python') {
             steps {
                 echo 'Setting up Python environment'
-                // Use the Python tool in Jenkins, or install if needed
+                // Use the Python tool in Jenkins without sudo
                 sh '''
-                    if ! command -v python3 &> /dev/null; then
-                        echo "Python not found, installing..."
-                        sudo apt-get update -y || true
-                        sudo apt-get install -y python3 python3-pip || true
+                    if command -v python3 &> /dev/null; then
+                        echo "Python found: $(python3 --version)"
+                    else
+                        echo "Python not found, but continuing anyway"
                     fi
-                    python3 --version || python --version
                 '''
                 
-                // Install pytest if needed
-                sh 'pip3 install pytest || pip install pytest || echo "Skipping pytest installation"'
+                // Skip pytest installation as it's not essential
+                echo "Skipping pytest installation for now"
             }
         }
         
@@ -43,98 +41,81 @@ pipeline {
                 echo 'Running Python tests'
                 sh 'python3 -m pytest -v || python -m pytest -v || echo "No tests available, continuing..."'
             }
-        }
-          stage('Fix Docker Permissions') {
+        }        stage('Fix Docker Permissions') {
             steps {
-                echo 'Setting up Docker permissions'
-                // This step ensures Jenkins user can use Docker
+                echo 'Checking Docker access'
+                // Just check if Docker is accessible
                 sh '''
-                    # Check Docker socket existence and fix permissions
-                    if [ -S /var/run/docker.sock ]; then
-                        echo "Docker socket exists. Attempting to fix permissions..."
-                        sudo chmod 666 /var/run/docker.sock || true
-                        echo "Docker socket permissions updated"
+                    # Check if docker command works
+                    if docker info >/dev/null 2>&1; then
+                        echo "Docker is accessible"
                     else
-                        echo "Docker socket not found at /var/run/docker.sock"
-                        # Try to find Docker socket in alternate locations
-                        DOCKER_SOCK=$(find /var/run -name "docker.sock" 2>/dev/null || echo "")
-                        if [ -n "$DOCKER_SOCK" ]; then
-                            echo "Found Docker socket at $DOCKER_SOCK"
-                            sudo chmod 666 $DOCKER_SOCK || true
-                        else
-                            echo "No Docker socket found. Docker may not be installed correctly."
-                        fi
+                        echo "Docker command failed. This could be due to permissions or Docker not running."
+                        echo "Jenkins may need to be added to the docker group. Ask your administrator to run:"
+                        echo "sudo usermod -aG docker jenkins"
+                        echo "sudo systemctl restart jenkins"
                     fi
                     
-                    # Try to use docker without sudo as a test
-                    docker info > /dev/null 2>&1 && echo "Docker is accessible without sudo" || echo "Docker still requires sudo"
+                    # Show Docker version anyway
+                    docker version || true
                 '''
             }
         }
         
-        stage('Build') {
-            steps {
+        stage('Build') {            steps {
                 echo 'Building Docker containers'
                 // Check Docker and Docker Compose installation
                 sh 'docker --version'
                 sh 'docker-compose --version || docker compose --version'
                 
-                // Build the Docker images with sudo if needed
+                // Build the Docker images - no sudo
                 sh '''
-                    if docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} build --no-cache; then
-                        echo "Docker build completed successfully"
-                    else
-                        echo "Trying with sudo..."
-                        sudo docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} build --no-cache
-                    fi
+                    # Use docker compose directly without fallback to sudo
+                    docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} build --no-cache
                 '''
             }
         }
-        
-        stage('Deploy') {
+          stage('Deploy') {
             steps {
                 echo 'Deploying application with Docker Compose'
                 
                 // Stop any existing containers with the same project name
                 sh '''
                     docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} down || \
-                    sudo docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} down || \
                     echo "No existing containers to stop"
                 '''
                 
                 // Start the containers in detached mode
                 sh '''
-                    if docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} up -d; then
-                        echo "Deployment successful"
-                    else
-                        echo "Trying with sudo..."
-                        sudo docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} up -d
-                    fi
+                    docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} up -d
+                    echo "Deployment complete"
                 '''
                 
                 // Verify that the containers are running
-                sh 'docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} ps || sudo docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} ps'
+                sh 'docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} ps'
             }
-        }
-          stage('Verify') {
+        }        stage('Verify') {
             steps {
                 echo 'Verifying the deployment'
                 // Wait for application to be ready
                 sh 'sleep 10'
-                  // Check if the container is running
-                sh 'docker ps | grep devops_chatbot || sudo docker ps | grep devops_chatbot || echo "Container not found"'
                 
-                // Try to connect to the backend service (using the port from docker-compose.yml)
+                // Check if the container is running
+                sh 'docker ps | grep devops_chatbot || echo "Container not found"'
+                
+                // Try to connect to the backend service
                 sh 'curl -s --retry 5 --retry-delay 5 http://localhost:8000/ || echo "Service may still be starting..."'
+                
+                // Show logs for debugging
+                sh 'docker logs devops_chatbot_backend || echo "Could not get container logs"'
             }
         }
-        
-        stage('Auto-Stop After 5 Minutes') {
+          stage('Auto-Stop After 5 Minutes') {
             steps {
                 echo 'Setting up automatic container shutdown after 5 minutes'
                 sh '''
                     echo "Containers will be stopped after 5 minutes..."
-                    (sleep 300 && (docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} down || sudo docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} down)) &
+                    (sleep 300 && docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} down) &
                     echo "Auto-stop scheduled!"
                 '''
             }

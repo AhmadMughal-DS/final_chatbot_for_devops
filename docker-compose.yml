@@ -6,7 +6,8 @@ services:
       dockerfile: Dockerfile
     container_name: devops_chatbot_backend
     ports:
-      - "0.0.0.0:8000:8000"  # Host port:container port    volumes:
+      - "8000:8000"
+    volumes:
       - ./frontend:/app/frontend:ro  # Mount only the frontend directory specifically
       - app_data:/data               # Persistent volume for data
     environment:
