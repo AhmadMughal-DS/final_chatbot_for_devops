@@ -19,7 +19,8 @@ pipeline {
                 git branch: 'main', url: "${GITHUB_REPO}"
             }
         }
-          stage('Setup Python') {
+        
+        stage('Setup Python') {
             steps {
                 echo 'Setting up Python environment'
                 // Use the Python tool in Jenkins without sudo
@@ -41,7 +42,9 @@ pipeline {
                 echo 'Running Python tests'
                 sh 'python3 -m pytest -v || python -m pytest -v || echo "No tests available, continuing..."'
             }
-        }        stage('Fix Docker Permissions') {
+        }
+        
+        stage('Fix Docker Permissions') {
             steps {
                 echo 'Checking Docker access'
                 // Just check if Docker is accessible
@@ -62,7 +65,8 @@ pipeline {
             }
         }
         
-        stage('Build') {            steps {
+        stage('Build') {
+            steps {
                 echo 'Building Docker containers'
                 // Check Docker and Docker Compose installation
                 sh 'docker --version'
@@ -75,7 +79,8 @@ pipeline {
                 '''
             }
         }
-          stage('Deploy') {
+        
+        stage('Deploy') {
             steps {
                 echo 'Deploying application with Docker Compose'
                 
@@ -94,7 +99,9 @@ pipeline {
                 // Verify that the containers are running
                 sh 'docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} ps'
             }
-        }        stage('Verify') {
+        }
+        
+        stage('Verify') {
             steps {
                 echo 'Verifying the deployment'
                 // Wait for application to be ready
@@ -110,7 +117,8 @@ pipeline {
                 sh 'docker logs devops_chatbot_backend || echo "Could not get container logs"'
             }
         }
-          stage('Auto-Stop After 5 Minutes') {
+        
+        stage('Auto-Stop After 5 Minutes') {
             steps {
                 echo 'Setting up automatic container shutdown after 5 minutes'
                 sh '''
