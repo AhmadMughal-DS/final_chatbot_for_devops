@@ -116,8 +116,7 @@ pipeline {
                 sh 'docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} ps || sudo docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} ps'
             }
         }
-        
-        stage('Verify') {
+          stage('Verify') {
             steps {
                 echo 'Verifying the deployment'
                 // Wait for application to be ready
@@ -127,6 +126,17 @@ pipeline {
                 
                 // Try to connect to the backend service (using the port from docker-compose.yml)
                 sh 'curl -s --retry 5 --retry-delay 5 http://localhost:8000/ || echo "Service may still be starting..."'
+            }
+        }
+        
+        stage('Auto-Stop After 5 Minutes') {
+            steps {
+                echo 'Setting up automatic container shutdown after 5 minutes'
+                sh '''
+                    echo "Containers will be stopped after 5 minutes..."
+                    (sleep 300 && (docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} down || sudo docker-compose -p ${PROJECT_NAME} -f ${DOCKER_COMPOSE_FILE} down)) &
+                    echo "Auto-stop scheduled!"
+                '''
             }
         }
     }
