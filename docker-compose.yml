@@ -10,11 +10,6 @@ services:
     volumes:
       - ./frontend:/app/frontend  # Mount the existing frontend directory
       - app_data:/data               # Persistent volume for data
-    environment:
-      - PYTHONDONTWRITEBYTECODE=1
-      - PYTHONUNBUFFERED=1
-      - MONGODB_URI=mongodb+srv://ahmadzafar:IUzvD9FvjOjHoqPR@devops.fzvip.mongodb.net/
-      - DEBUG=1
     # Container will be stopped by the Jenkins pipeline after 5 minutes
 
 volumes:
